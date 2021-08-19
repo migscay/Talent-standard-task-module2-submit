@@ -10,6 +10,7 @@ import { BodyWrapper, loaderData } from '../Layout/BodyWrapper.jsx';
 export default class TalentFeed extends React.Component {
     constructor(props) {
         super(props);
+        this.listRef = React.createRef();
 
         let loader = loaderData
         loader.allowedUsers.push("Employer")
@@ -36,7 +37,9 @@ export default class TalentFeed extends React.Component {
            watchlist: [],
            loaderData: loader,
            loadingFeedData: false,
-           companyDetails: null
+           companyDetails: null,
+           lastLoadPosition: 0,
+           hasMore: true
         }
 
         this.init = this.init.bind(this);
@@ -90,6 +93,7 @@ export default class TalentFeed extends React.Component {
     }
 
     loadData(callback) {
+        console.log("loadData",this.state.loadPosition)
         var cookies = Cookies.get('talentAuthToken');
        $.ajax({ 
         url: 'https://talent-profile.azurewebsites.net/profile/profile/getTalent',
@@ -106,24 +110,57 @@ export default class TalentFeed extends React.Component {
         dataType: "json",
         success: function (res) {
             let talentList = null;
-            if (res) {
-                console.log("talentList", res.data)
+            if (res.success) {
+                if (res) {
+                    if (!res.data) {debugger}
+                    console.log("talentList", res.data)
+                    if (res.data.length < 5) {
+                        this.setState({hasMore: false})    
+                    }    
+                }
+                this.updateWithoutSave(res.data)    
+            } 
+            else
+            {
+                // alert("axios return false success")
+                console.log(res)
             }
-            this.updateWithoutSave(res.data)
             callback();
         }.bind(this),
         error: function (res) {
+            debugger;
             console.log(res.status)
+            this.setState({hasMore: false})
             callback();
         }
         }) 
     }
 
     handleScroll() {
+        
+        if (!this.state.hasMore) {return;}
+        const wrappedElement = document.getElementById('talentCard');
+    
+        if (wrappedElement.getBoundingClientRect().bottom <= window.innerHeight) 
+        {
+          console.log('header bottom reached',wrappedElement.getBoundingClientRect().bottom,window.innerHeight);
+          let loader = TalentUtil.deepCopy(this.state.loaderData);
+          loaderData.isLoading = false;    
+          this.setState({
+              loadPosition: this.state.loadPosition + 1
+          })
+          if (this.state.loadPosition > this.state.lastLoadPosition)
+          {
+            this.loadData(() => { 
+                this.setState({ loaderData,
+                    lastLoadPosition: this.state.loadPosition
+                })
+            })
+          }
+        }
     }
-
+    
     updateWithoutSave(newValues) {
-        //let newTalents = Object.assign({}, this.state.talentList, newValues)
         this.setState({
             talentList: newValues
         })        
@@ -138,7 +175,7 @@ export default class TalentFeed extends React.Component {
                             <Grid.Column width={4}>                        
                                 <CompanyProfile employerData={this.state.employerData.companyContact} />
                             </Grid.Column>
-                            <Grid.Column width={8}>                        
+                            <Grid.Column id="talentCard" width={8}>                        
                                 {console.log("passing",this.state.talentList)}
                                 <TalentCard talentList={this.state.talentList} />
                             </Grid.Column>

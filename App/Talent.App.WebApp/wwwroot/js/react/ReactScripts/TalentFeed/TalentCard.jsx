@@ -1,6 +1,5 @@
-﻿import React from 'react';
+﻿import React, {useState,useEffect} from 'react';
 import TalentCardDetail from './TalentCardDetail.jsx';
-import { Card, Icon, Image, Grid, Item, Header } from 'semantic-ui-react';
 
 const TalentCard = (Props) => {
 
@@ -8,10 +7,19 @@ const TalentCard = (Props) => {
 
     console.log("card talentList",talentList);
 
+    const [talents,setTalents] = useState([]);
+
+    useEffect(() => {
+        if (!talentList) {debugger;}
+        setTalents(talents.concat(talentList))
+    },[talentList]);
+    
+    console.log("render",talents.length);
+
     return (
         <React.Fragment>
-            { talentList.length > 0 ?
-              talentList.map((talent) => (
+            { talents.length > 0 ?
+              talents.map((talent) => (
             <TalentCardDetail talent={talent} key={talent.id}/>         
             )) : <p>There are no talents found for your recruitment company</p>}
         </React.Fragment>
